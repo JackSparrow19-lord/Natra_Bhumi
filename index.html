@@ -1,29 +1,853 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light">
 <head>
-    <title>Environmental Classification</title>
-</head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MatriBhumi — National Digital Platform for Land Intelligence & Policy Innovation</title>
+  <meta name="description" content="India's National Platform connecting land data, research, geospatial intelligence, AI and policy simulations for evidence-based land governance." />
 
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Leaflet GIS Map Library -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js for High-Density Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Core App Stylesheets -->
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+</head>
 <body>
 
-    <h1>Satellite Environmental Classification</h1>
+<div class="app-shell">
 
-    <form action="/predict" method="POST" enctype="multipart/form-data">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-brand">
+      <button class="header-btn mobile-only" id="mobileMenuToggle" aria-label="Open Mobile Menu">☰</button>
+      <a href="#dashboard" style="display:flex; align-items:center; gap:10px;">
+        <div class="brand-emblem">
+          <svg viewBox="0 0 40 40" width="36" height="36" fill="none">
+            <rect width="40" height="40" rx="8" fill="#123B5D"/>
+            <path d="M7 27L14 13L20 22L25 11L33 27" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="14" cy="13" r="2.2" fill="#2A8C82"/>
+            <circle cx="25" cy="11" r="2.2" fill="#E07A3F"/>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <span class="brand-title" data-i18n="app.title">MatriBhumi</span>
+          <span class="brand-sub" data-i18n="app.govt">Govt of India · Land Intelligence</span>
+        </div>
+      </a>
+    </div>
 
-        <input type="file" name="image" accept="image/*" required>
+    <!-- Global Search Bar (Trigger) -->
+    <div class="header-search-bar">
+      <button class="search-trigger-btn" id="headerSearchTrigger">
+        <span>🔍</span>
+        <span data-i18n="header.searchPlaceholder">Search datasets, policies, research or coords (Ctrl+K)...</span>
+        <span class="search-kbd">Ctrl K</span>
+      </button>
+    </div>
 
-        <button type="submit">
-            Predict
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <!-- Language Selector -->
+      <select class="header-lang-select" id="headerLanguageSelect" aria-label="Select Language">
+        <option value="en">English (EN)</option>
+        <option value="hi">हिंदी (HI)</option>
+        <option value="mr">मराठी (MR)</option>
+      </select>
+
+      <!-- Theme Switcher -->
+      <button class="header-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme">
+        <span id="themeToggleIcon">🌙</span>
+      </button>
+
+      <!-- Notifications -->
+      <div style="position: relative;">
+        <button class="header-btn" id="headerNotifBtn" title="Notifications">
+          <span>🔔</span>
+          <span class="badge-count" id="notifBadge">2</span>
         </button>
 
-    </form>
+        <!-- Notifications Dropdown -->
+        <div class="notif-dropdown" id="notifDropdown">
+          <div class="notif-header">
+            <span>Official Alerts & Updates</span>
+            <button class="btn btn-xs btn-text" onclick="App.showToast('All notifications marked as read.', 'info'); document.getElementById('notifBadge').style.display='none';">Mark all read</button>
+          </div>
+          <div class="notif-list" id="notifList"></div>
+        </div>
+      </div>
 
-    {% if prediction %}
+      <!-- Auth State Actions -->
+      <div id="headerAuthActions" style="display: flex; gap: 8px;">
+        <button class="btn btn-sm btn-outline" id="headerSignInBtn" data-i18n="header.signIn">Sign In</button>
+        <button class="btn btn-sm btn-primary" id="headerRegisterBtn" data-i18n="header.register">Register</button>
+      </div>
 
-        <h2>Prediction: {{ prediction }}</h2>
-        <h3>Confidence: {{ confidence }}%</h3>
+      <!-- Logged-in User Profile Summary -->
+      <div id="headerUserProfile" class="user-profile-summary" style="display: none;" onclick="Navigation.navigate('profile')">
+        <div class="user-avatar-sm">VR</div>
+        <div class="user-info-text">
+          <span class="user-name-text" id="headerUserName">Dr. Vikramaditya</span>
+          <span class="user-role-text" id="headerUserRole">Senior Scientist</span>
+        </div>
+      </div>
+    </div>
+  </header>
 
-    {% endif %}
+﻿  <!-- BODY -->
+  <div class="app-body">
+
+    <!-- SIDEBAR -->
+    <aside class="app-sidebar" id="appSidebar">
+      <nav class="sidebar-nav">
+        <!-- National Dashboard -->
+        <div class="sidebar-group">
+          <a href="#dashboard" class="sidebar-group-title sidebar-link">
+            <span class="sidebar-group-icon">🏛️</span>
+            <span class="sidebar-group-text" data-i18n="nav.dashboard">National Dashboard</span>
+          </a>
+        </div>
+
+        <!-- Research Hub -->
+        <div class="sidebar-group expanded">
+          <div class="sidebar-group-title">
+            <span class="sidebar-group-icon">📚</span>
+            <span class="sidebar-group-text" data-i18n="nav.research">Research Hub</span>
+            <span class="sidebar-arrow">▶</span>
+          </div>
+          <div class="sidebar-sub-items">
+            <a href="#research-explorer" class="sidebar-link" data-i18n="nav.researchExplorer">Research Explorer</a>
+            <a href="#literature-ai" class="sidebar-link" data-i18n="nav.literatureAi">Literature AI</a>
+            <a href="#datasets" class="sidebar-link" data-i18n="nav.datasets">Datasets</a>
+            <a href="#knowledge-repo" class="sidebar-link" data-i18n="nav.knowledgeRepo">Knowledge Repository</a>
+          </div>
+        </div>
+
+        <!-- Land Intelligence -->
+        <div class="sidebar-group expanded">
+          <div class="sidebar-group-title">
+            <span class="sidebar-group-icon">🛰️</span>
+            <span class="sidebar-group-text" data-i18n="nav.land">Land Intelligence</span>
+            <span class="sidebar-arrow">▶</span>
+          </div>
+          <div class="sidebar-sub-items">
+            <a href="#land-explorer" class="sidebar-link" data-i18n="nav.landExplorer">Land Explorer</a>
+            <a href="#evidence-graph" class="sidebar-link" data-i18n="nav.evidenceGraph">Evidence Graph</a>
+            <a href="#land-trends" class="sidebar-link" data-i18n="nav.landTrends">Land Trends</a>
+            <a href="#anomaly-analysis" class="sidebar-link" data-i18n="nav.anomalyAnalysis">Anomaly Analysis</a>
+          </div>
+        </div>
+
+        <!-- GIS Lab -->
+        <div class="sidebar-group expanded">
+          <div class="sidebar-group-title">
+            <span class="sidebar-group-icon">🗺️</span>
+            <span class="sidebar-group-text" data-i18n="nav.gis">GIS Lab</span>
+            <span class="sidebar-arrow">▶</span>
+          </div>
+          <div class="sidebar-sub-items">
+            <a href="#gis-lab" class="sidebar-link" data-i18n="nav.landUse">Land Use & Expansion</a>
+          </div>
+        </div>
+
+        <!-- Policy Lab -->
+        <div class="sidebar-group expanded">
+          <div class="sidebar-group-title">
+            <span class="sidebar-group-icon">⚖️</span>
+            <span class="sidebar-group-text" data-i18n="nav.policy">Policy Lab</span>
+            <span class="sidebar-arrow">▶</span>
+          </div>
+          <div class="sidebar-sub-items">
+            <a href="#policy-explorer" class="sidebar-link" data-i18n="nav.policyExplorer">Policy Explorer</a>
+            <a href="#scenario-builder" class="sidebar-link" data-i18n="nav.scenarioBuilder">Scenario Builder</a>
+            <a href="#simulation" class="sidebar-link" data-i18n="nav.simulation">Simulation Workspace</a>
+            <a href="#compare-policies" class="sidebar-link" data-i18n="nav.comparePolicies">Compare Policies</a>
+          </div>
+        </div>
+
+        <!-- Insights -->
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">
+            <span class="sidebar-group-icon">📈</span>
+            <span class="sidebar-group-text" data-i18n="nav.insights">Insights</span>
+            <span class="sidebar-arrow">▶</span>
+          </div>
+          <div class="sidebar-sub-items">
+            <a href="#insights-trends" class="sidebar-link" data-i18n="nav.insightsTrends">Land Trends</a>
+            <a href="#insights-performance" class="sidebar-link" data-i18n="nav.policyPerformance">Policy Performance</a>
+            <a href="#insights-disputes" class="sidebar-link" data-i18n="nav.disputes">Disputes Analytics</a>
+            <a href="#insights-climate" class="sidebar-link" data-i18n="nav.climateResilience">Climate Resilience</a>
+          </div>
+        </div>
+
+        <!-- Innovation Hub -->
+        <div class="sidebar-group">
+          <div class="sidebar-group-title">
+            <span class="sidebar-group-icon">💡</span>
+            <span class="sidebar-group-text" data-i18n="nav.innovation">Innovation Hub</span>
+            <span class="sidebar-arrow">▶</span>
+          </div>
+          <div class="sidebar-sub-items">
+            <a href="#innovation-challenges" class="sidebar-link" data-i18n="nav.challenges">Challenges</a>
+            <a href="#innovation-hackathons" class="sidebar-link" data-i18n="nav.hackathons">Hackathons</a>
+            <a href="#innovation-grants" class="sidebar-link" data-i18n="nav.grants">Grants</a>
+            <a href="#innovation-projects" class="sidebar-link" data-i18n="nav.projects">Projects</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="sidebar-toggle-btn" id="sidebarToggleBtn" aria-expanded="true">
+          <span>◀</span>
+          <span class="sidebar-toggle-text">Collapse Sidebar</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="main-workspace" id="mainContentArea">
+      <div class="workspace-top-bar">
+        <div class="breadcrumbs-container" id="appBreadcrumbs">
+          <span class="breadcrumb-item">Home</span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-item current">National Dashboard</span>
+        </div>
+        <div class="live-telemetry-badge">
+          <span class="badge badge-teal">● Live Telemetry Online (ISRO & Cadastre)</span>
+        </div>
+      </div>
+
+      <div class="workspace-inner">
+
+        <!-- 1. NATIONAL DASHBOARD VIEW -->
+        <section id="view-dashboard" class="view-container active">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="dash.title">National Land Intelligence Dashboard</h1>
+            <p class="view-subtitle" data-i18n="dash.subtitle">Real-time telemetry, cadastral analytics and geospatial intelligence across 36 States & UTs</p>
+          </div>
+
+          <!-- 8 KPI Metrics Grid -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.totalArea">Total Area</span><span class="kpi-card-icon">🇮🇳</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-total-area">3,287,263</span><span class="kpi-unit">sq km</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.agriLand">Agricultural Land</span><span class="kpi-card-icon">🌾</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-agri-land">54.2%</span><span class="kpi-unit">1.78M sq km</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.forestCover">Forest Cover</span><span class="kpi-card-icon">🌲</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-forest-cover">24.6%</span><span class="kpi-unit">809k sq km</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.urbanLand">Urban Built-up</span><span class="kpi-card-icon">🏙️</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-urban-land">8.7%</span><span class="kpi-unit">286k sq km</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.infraExpansion">10-Yr Urban Growth</span><span class="kpi-card-icon">📈</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-urban-growth">+18.4%</span><span class="kpi-unit">Corridors</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.activeResearch">Active Research</span><span class="kpi-card-icon">📄</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-active-research">1,420+</span><span class="kpi-unit">Papers</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.activePolicies">Active Policies</span><span class="kpi-card-icon">⚖️</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-active-policies">384</span><span class="kpi-unit">Acts & Rules</span></div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-card-header"><span class="kpi-card-title" data-i18n="dash.datasetsCount">National Datasets</span><span class="kpi-card-icon">📊</span></div>
+              <div class="kpi-value-row"><span class="kpi-value" id="kpi-datasets">920+</span><span class="kpi-unit">Open Datasets</span></div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="dash-charts-grid">
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <h3 class="dash-panel-title">National Land Cover Classification</h3>
+                <span class="badge badge-teal">ISRO LULC 2026</span>
+              </div>
+              <div class="chart-container-wrap">
+                <canvas id="dashLandUseChart"></canvas>
+              </div>
+            </div>
+
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <h3 class="dash-panel-title">Decadal Urban Expansion vs. Cadastre Digitization</h3>
+                <span class="badge badge-navy">DILRMP Progress</span>
+              </div>
+              <div class="chart-container-wrap">
+                <canvas id="dashTrendsChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Grid: State Leaderboard & Live Alerts -->
+          <div class="dash-bottom-grid">
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <h3 class="dash-panel-title" data-i18n="dash.stateRankings">State Land Governance & Digitization Index</h3>
+                <input type="text" id="stateTableSearch" class="form-input" style="max-width: 220px; padding: 4px 10px; font-size: 0.82rem;" placeholder="Search state..." />
+              </div>
+              <div class="data-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>State / Region</th>
+                      <th>Digitization</th>
+                      <th>Parcels</th>
+                      <th>10-Yr Growth</th>
+                      <th>Dispute Trend</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dashStateTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="dash-panel">
+              <div class="dash-panel-header">
+                <h3 class="dash-panel-title" data-i18n="dash.alertsFeed">Live Anomaly & Field Intelligence</h3>
+                <a href="#anomaly-analysis" class="btn btn-xs btn-outline">View All →</a>
+              </div>
+              <div class="alert-feed-list" id="dashAlertFeed"></div>
+
+              <div class="mt-4">
+                <h4 class="mb-2" style="font-size: 0.88rem;">National GIS Quick Preview</h4>
+                <div id="dashMiniMap" style="height: 180px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+﻿        <!-- 2. RESEARCH EXPLORER VIEW -->
+        <section id="view-research-explorer" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.researchExplorer">Research Explorer</h1>
+            <p class="view-subtitle">Search, filter and access peer-reviewed papers, cadastral studies and policy reports</p>
+          </div>
+
+          <div class="filters-bar-card mb-4" style="background:var(--bg-surface); padding:16px; border:1px solid var(--border-color); border-radius:var(--radius-md); display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+            <input type="text" id="researchSearchInput" class="form-input" style="flex:1; min-width:240px;" placeholder="Search papers by keyword, author, or methodology..." />
+            <select id="researchCategoryFilter" class="form-select">
+              <option value="all">All Categories</option>
+              <option value="Land-Use">Land-Use Dynamics</option>
+              <option value="Governance">Land Governance & Law</option>
+              <option value="Climate">Climate Resilience</option>
+              <option value="Policy">Policy Impact</option>
+              <option value="Infrastructure">Infrastructure</option>
+            </select>
+            <select id="researchRegionFilter" class="form-select">
+              <option value="all">All Regions</option>
+              <option value="Maharashtra">Maharashtra</option>
+              <option value="Karnataka">Karnataka</option>
+              <option value="Gujarat">Gujarat</option>
+              <option value="West Bengal">West Bengal</option>
+              <option value="Jharkhand">Jharkhand & Odisha</option>
+            </select>
+            <span id="researchResultCount" style="font-size:0.85rem; font-weight:700; color:var(--text-muted);"></span>
+          </div>
+
+          <div class="cards-grid-3" id="researchCardsGrid"></div>
+        </section>
+
+        <!-- 3. LITERATURE AI VIEW -->
+        <section id="view-literature-ai" class="view-container">
+          <div class="view-header text-center" style="text-align: center; margin-bottom: 30px;">
+            <h1 class="view-title" data-i18n="nav.literatureAi">Literature AI Research Assistant</h1>
+            <p class="view-subtitle">Ask questions to synthesize across 1,420+ peer-reviewed papers, statutory acts, and geospatial records</p>
+          </div>
+
+          <div class="lit-ai-box">
+            <form id="litAiForm">
+              <div class="lit-search-input-row">
+                <input type="text" id="litAiInput" class="lit-search-input" placeholder="e.g. How has urban expansion impacted farmland along expressway corridors in Maharashtra?" />
+                <button type="submit" class="btn btn-primary btn-lg" data-i18n="btn.askAi">Ask AI Assistant</button>
+              </div>
+            </form>
+
+            <div class="lit-suggestions-row">
+              <span style="font-size:0.8rem; font-weight:700; color:var(--text-muted); padding:6px 0;">Try asking:</span>
+              <button class="lit-suggestion-chip">How has urban expansion affected Maharashtra farmlands?</button>
+              <button class="lit-suggestion-chip">What is the climate risk to agricultural land in the Sundarbans?</button>
+              <button class="lit-suggestion-chip">How does SVAMITVA drone mapping reduce rural boundary disputes?</button>
+            </div>
+          </div>
+
+          <div class="lit-ai-result-panel hidden" id="litAiResult">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <span class="badge badge-teal">AI Synthesized Intelligence</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Spring AI / RAG Engine Demo</span>
+            </div>
+            <h3 id="litAiAnswerQuery" style="font-size:1.1rem; margin-bottom:10px; color:var(--navy-700);"></h3>
+            <div id="litAiAnswerBody" class="lit-ai-body" style="font-size:0.94rem; line-height:1.6; color:var(--text-main);"></div>
+
+            <h4 class="mt-4 mb-2" style="font-size:0.88rem;">Synthesized Sources & Citations</h4>
+            <div class="source-pills-wrap" id="litAiAnswerSources" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+
+            <div class="ai-metrics-row mt-3" id="litAiMetrics" style="display:flex; gap:16px; border-top:1px solid var(--border-color); padding-top:12px; font-size:0.82rem;"></div>
+          </div>
+        </section>
+
+        <!-- 4. DATASETS CATALOG VIEW -->
+        <section id="view-datasets" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.datasets">Datasets Catalog</h1>
+            <p class="view-subtitle">High-resolution vector boundaries, multi-spectral land telemetry, and court dispute registries</p>
+          </div>
+
+          <div class="filters-bar-card mb-4" style="background:var(--bg-surface); padding:16px; border:1px solid var(--border-color); border-radius:var(--radius-md);">
+            <input type="text" id="datasetsSearch" class="form-input" style="width:100%;" placeholder="Search datasets by theme, file format (GeoJSON, GeoTIFF), or agency..." />
+          </div>
+
+          <div class="cards-grid-2" id="datasetsGrid"></div>
+        </section>
+
+        <!-- 5. KNOWLEDGE REPOSITORY VIEW -->
+        <section id="view-knowledge-repo" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.knowledgeRepo">Knowledge Repository</h1>
+            <p class="view-subtitle">Official gazettes, technical manuals, cadastral survey standards and policy frameworks</p>
+          </div>
+
+          <div id="knowledgeRepoList" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </section>
+
+        <!-- 6. LAND EXPLORER VIEW -->
+        <section id="view-land-explorer" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.landExplorer">Cadastral Land Explorer</h1>
+            <p class="view-subtitle">Instant lookup of digitized revenue survey numbers, ULPIN geocodes and title status</p>
+          </div>
+
+          <div class="dash-panel mb-4">
+            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+              <select class="form-select" style="min-width:180px;">
+                <option>Maharashtra (MH)</option>
+                <option>Karnataka (KA)</option>
+                <option>Gujarat (GJ)</option>
+                <option>Uttar Pradesh (UP)</option>
+              </select>
+              <input type="text" id="parcelSearchInput" class="form-input" style="flex:1;" placeholder="Enter Survey / Khasra No. (e.g. 402/1A) or 14-digit ULPIN Bhu-Aadhaar..." value="402/1A" />
+              <button class="btn btn-primary" id="parcelSearchBtn">Lookup Parcel</button>
+            </div>
+          </div>
+
+          <div id="parcelResultPanel"></div>
+        </section>
+
+        <!-- 7. EVIDENCE GRAPH VIEW -->
+        <section id="view-evidence-graph" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.evidenceGraph">Evidence & Policy Relationship Graph</h1>
+            <p class="view-subtitle">Interactive relationship map linking land parcels, policies, academic research, institutions, and environmental factors</p>
+          </div>
+
+          <div class="graph-workspace-layout">
+            <div class="graph-canvas-wrap">
+              <div class="graph-toolbar">
+                <select id="graphTypeFilter" class="form-select" style="font-size:0.8rem; padding:4px 8px;">
+                  <option value="all">All Node Types</option>
+                  <option value="Land">Land Parcels</option>
+                  <option value="Policy">Policies</option>
+                  <option value="Research">Research Studies</option>
+                  <option value="Institution">Institutions</option>
+                  <option value="Region">Regions</option>
+                  <option value="Infrastructure">Infrastructure</option>
+                </select>
+                <input type="text" id="graphSearchInput" class="form-input" style="font-size:0.8rem; padding:4px 8px; width:140px;" placeholder="Search node..." />
+                <button class="btn btn-xs btn-outline" id="graphResetBtn">Reset View</button>
+              </div>
+              <canvas id="evidenceGraphCanvas" class="graph-canvas"></canvas>
+            </div>
+
+            <div class="graph-inspector-panel" id="graphDetailPanel">
+              <div class="empty-state" style="text-align:center; padding:30px 10px;">
+                <span style="font-size:2rem;">🔍</span>
+                <h4 style="margin:10px 0;">Click Any Node to Inspect</h4>
+                <p style="font-size:0.82rem; color:var(--text-muted);">Explore connected policies, underlying datasets, research citations, and telemetry.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. LAND TRENDS VIEW -->
+        <section id="view-land-trends" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.landTrends">Land Trends & Decadal Transitions</h1>
+            <p class="view-subtitle">Time-series tracking of agricultural conversion, urban sprawl, and green cover resilience</p>
+          </div>
+
+          <div class="dash-panel">
+            <div class="chart-container-wrap" style="height:360px;">
+              <canvas id="landTrendsTimeChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- 9. ANOMALY ANALYSIS VIEW -->
+        <section id="view-anomaly-analysis" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.anomalyAnalysis">AI Anomaly Detection & Field Audits</h1>
+            <p class="view-subtitle">Satellite-driven automated flags for unauthorized land conversions, wetland infilling, and duplicate cadastres</p>
+          </div>
+
+          <div id="anomalyFeedContainer" class="cards-grid-2"></div>
+        </section>
+
+        <!-- 10. GIS LAB WORKSPACE VIEW -->
+        <section id="view-gis-lab" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.gis">Interactive GIS Lab</h1>
+            <p class="view-subtitle">Multi-layer geospatial intelligence workspace with live satellite telemetry and corridor analysis</p>
+          </div>
+
+          <div class="gis-workspace-layout">
+            <div class="gis-control-card">
+              <h4 style="font-size:0.9rem;">Geospatial Layers</h4>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="btn btn-sm btn-secondary gis-layer-toggle active" data-layer="landuse">🌾 Land Use / Crop Cover</button>
+                <button class="btn btn-sm btn-secondary gis-layer-toggle" data-layer="urban">🏙️ Urban Expansion</button>
+                <button class="btn btn-sm btn-secondary gis-layer-toggle" data-layer="climate">⚠️ Climate & Salinity Risk</button>
+                <button class="btn btn-sm btn-secondary gis-layer-toggle" data-layer="infra">🛣️ Infrastructure Corridors</button>
+                <button class="btn btn-sm btn-secondary gis-layer-toggle" data-layer="disputes">⚖️ Dispute Density Hotspots</button>
+              </div>
+
+              <hr style="border:0; border-top:1px solid var(--border-color);"/>
+
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                  <label>Layer Opacity</label>
+                  <strong id="gisOpacityVal">85%</strong>
+                </div>
+                <input type="range" id="gisOpacitySlider" min="0.1" max="1" step="0.05" value="0.85" />
+              </div>
+
+              <div class="form-group">
+                <div style="display:flex; justify-content:space-between; font-size:0.8rem;">
+                  <label>Timeline Year</label>
+                  <strong id="gisTimelineYear">2026</strong>
+                </div>
+                <input type="range" id="gisTimelineSlider" min="2015" max="2026" step="1" value="2026" />
+              </div>
+
+              <hr style="border:0; border-top:1px solid var(--border-color);"/>
+
+              <h4 style="font-size:0.9rem;">Basemap Styles</h4>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                <button class="btn btn-xs btn-outline gis-base-btn active" data-base="carto-light">Light</button>
+                <button class="btn btn-xs btn-outline gis-base-btn" data-base="carto-dark">Dark</button>
+                <button class="btn btn-xs btn-outline gis-base-btn" data-base="satellite">Satellite</button>
+                <button class="btn btn-xs btn-outline gis-base-btn" data-base="osm">Street</button>
+              </div>
+            </div>
+
+            <div class="gis-map-viewport">
+              <div class="gis-floating-tools">
+                <button class="gis-tool-btn" id="gisFullscreenBtn" title="Toggle Fullscreen">⛶</button>
+                <button class="gis-tool-btn" id="gisLocateBtn" title="Locate Region">🎯</button>
+              </div>
+              <div id="gisLabMapCanvas" class="gis-map-canvas"></div>
+              <div class="gis-floating-hud" id="gisLabMapCanvas-coords">Lat: 22.6000° N, Lng: 79.5000° E | Zoom: 5</div>
+            </div>
+
+            <div class="gis-control-card" id="gisRegionInfoPanel">
+              <h4 style="font-size:0.9rem;">Region Telemetry</h4>
+              <p style="font-size:0.82rem; color:var(--text-muted);">Click any map marker or polygon to inspect localized cadastral metrics, urban growth, and environmental risks.</p>
+            </div>
+          </div>
+        </section>
+
+﻿        <!-- 11. POLICY EXPLORER VIEW -->
+        <section id="view-policy-explorer" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.policyExplorer">Policy Explorer & Frameworks</h1>
+            <p class="view-subtitle">Centralized catalog of national and state land governance acts, reforms, and digitization frameworks</p>
+          </div>
+          <div class="cards-grid-2" id="policyCardsGrid"></div>
+        </section>
+
+        <!-- 12. SCENARIO BUILDER VIEW -->
+        <section id="view-scenario-builder" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.scenarioBuilder">Policy Scenario Builder</h1>
+            <p class="view-subtitle">Simulate parametric regulatory shifts to project 10-year agricultural, economic and legal impacts</p>
+          </div>
+
+          <div class="dash-panel">
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:18px;">
+              <div class="form-group">
+                <label>Permitted Urban Sprawl Corridor Rate (%)</label>
+                <input type="range" id="scenUrbanGrowth" min="5" max="40" value="15" />
+              </div>
+              <div class="form-group">
+                <label>Mandatory Green Reserve Afforestation (%)</label>
+                <input type="range" id="scenGreenReq" min="5" max="35" value="20" />
+              </div>
+              <div class="form-group">
+                <label>Tenant Cultivator Formal Credit Weight</label>
+                <input type="range" id="scenTenantProt" min="10" max="90" value="50" />
+              </div>
+            </div>
+            <div class="mt-4">
+              <button class="btn btn-primary" id="runScenarioBtn" data-i18n="btn.runSimulation">Run Scenario Analysis</button>
+            </div>
+          </div>
+
+          <div class="mt-4" id="scenarioResultBox"></div>
+        </section>
+
+        <!-- 13. SIMULATION WORKSPACE VIEW -->
+        <section id="view-simulation" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.simulation">Simulation Workspace</h1>
+            <p class="view-subtitle">Monte-Carlo comparative policy impact radar model</p>
+          </div>
+
+          <div class="dash-panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+              <h3 class="dash-panel-title">Baseline vs. Policy Intervention Multidimensional Matrix</h3>
+              <button class="btn btn-sm btn-primary" id="simWorkspaceRunBtn">Re-calculate Model</button>
+            </div>
+            <div class="chart-container-wrap" style="height:380px;">
+              <canvas id="simulationComparisonChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <!-- 14. COMPARE POLICIES VIEW -->
+        <section id="view-compare-policies" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.comparePolicies">Compare Policies & Legislation</h1>
+            <p class="view-subtitle">Side-by-side evaluation matrix of land acquisition, tenancy and digitization acts</p>
+          </div>
+
+          <div class="dash-panel">
+            <div class="data-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Dimension</th>
+                    <th>RFCTLARR 2.0 (2022)</th>
+                    <th>DILRMP 2.0 (2025)</th>
+                    <th>Model Land Leasing Act</th>
+                    <th>Green Corridor Policy (2023)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Primary Focus</strong></td>
+                    <td>Fair Compensation & Rehabilitation</td>
+                    <td>3D Cadastre & ULPIN Bhu-Aadhaar</td>
+                    <td>Tenant Cultivator Formal Credit</td>
+                    <td>2:1 Compensatory Afforestation</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Target Coverage</strong></td>
+                    <td>All 28 States & UTs</td>
+                    <td>100% Cadastral Parcels</td>
+                    <td>14 Agricultural States</td>
+                    <td>22 Infrastructure States</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Dispute Mitigation</strong></td>
+                    <td>Fast-track Authority (45 Days)</td>
+                    <td>Immutable 3D Survey Bounds</td>
+                    <td>Standardized Lease Contracts</td>
+                    <td>Pre-approved Eco Buffers</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Impact Rating</strong></td>
+                    <td><span class="badge badge-teal">88/100</span></td>
+                    <td><span class="badge badge-teal">92/100</span></td>
+                    <td><span class="badge badge-teal">84/100</span></td>
+                    <td><span class="badge badge-teal">79/100</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 15. INSIGHTS VIEWS -->
+        <section id="view-insights-trends" class="view-container">
+          <div class="view-header"><h1 class="view-title">Insights — Land Conversion Trends</h1></div>
+          <div class="dash-panel"><div class="chart-container-wrap" style="height:320px;"><canvas id="insightsTrendsChart"></canvas></div></div>
+        </section>
+
+        <section id="view-insights-performance" class="view-container">
+          <div class="view-header"><h1 class="view-title">Insights — Policy Performance Indicators</h1></div>
+          <div class="dash-panel">
+            <h4>DILRMP 2.0 & SVAMITVA Milestone Achievements</h4>
+            <p class="mt-2 text-muted">184 Million unique land parcel identifications generated nationwide with 99.1% target accuracy.</p>
+          </div>
+        </section>
+
+        <section id="view-insights-disputes" class="view-container">
+          <div class="view-header"><h1 class="view-title">Insights — Land Dispute Resolution Analytics</h1></div>
+          <div class="dash-panel"><div class="chart-container-wrap" style="height:320px;"><canvas id="insightsDisputesChart"></canvas></div></div>
+        </section>
+
+        <section id="view-insights-climate" class="view-container">
+          <div class="view-header"><h1 class="view-title">Insights — Climate Resilience Land Atlas</h1></div>
+          <div class="dash-panel">
+            <h4>National Coastal Vulnerability & Arid Stress Ranking</h4>
+            <p class="mt-2 text-muted">Sundarbans Delta and Marathwada identified as top priority ecological intervention zones.</p>
+          </div>
+        </section>
+
+        <!-- 16. INNOVATION HUB VIEWS -->
+        <section id="view-innovation-challenges" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.challenges">Open Innovation Challenges</h1>
+            <p class="view-subtitle">High-impact algorithmic challenges with cash rewards for AI researchers and startups</p>
+          </div>
+          <div class="cards-grid-2" id="challengesGrid"></div>
+        </section>
+
+        <section id="view-innovation-hackathons" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.hackathons">National Hackathons</h1>
+            <p class="view-subtitle">Collaborate and build open-source geospatial tools for citizen land governance</p>
+          </div>
+          <div class="cards-grid-2" id="hackathonsGrid"></div>
+        </section>
+
+        <section id="view-innovation-grants" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.grants">Research & Deep-Tech Grants</h1>
+            <p class="view-subtitle">Institutional funding support for empirical land studies and drone LiDAR algorithms</p>
+          </div>
+          <div class="cards-grid-2" id="grantsGrid"></div>
+        </section>
+
+        <section id="view-innovation-projects" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="nav.projects">Active Mission Projects</h1>
+            <p class="view-subtitle">Flagship government pilot implementations across 3D cadastre and carbon telemetry</p>
+          </div>
+          <div class="cards-grid-3" id="projectsGrid"></div>
+        </section>
+
+        <!-- 17. USER PROFILE VIEW -->
+        <section id="view-profile" class="view-container">
+          <div class="view-header">
+            <h1 class="view-title" data-i18n="header.profile">Officer & Researcher Profile</h1>
+            <p class="view-subtitle">Manage preferences, telemetry credentials, language, and notification settings</p>
+          </div>
+
+          <div class="dash-panel" style="max-width:680px;">
+            <div class="form-group">
+              <label>Full Official Name</label>
+              <input type="text" class="form-input" id="profileName" value="Dr. Vikramaditya Rathore" />
+            </div>
+            <div class="form-group mt-2">
+              <label>Official Email</label>
+              <input type="email" class="form-input" id="profileEmail" value="v.rathore@landgov.res.in" readonly />
+            </div>
+            <div class="form-group mt-2">
+              <label>Affiliated Institution / Department</label>
+              <input type="text" class="form-input" id="profileOrg" value="National Institute of Urban Affairs" />
+            </div>
+            <div class="modal-footer-actions mt-4" style="display:flex; justify-content:space-between;">
+              <button class="btn btn-danger" onclick="Auth.logout()">Sign Out</button>
+              <button class="btn btn-primary" onclick="App.showToast('Profile preferences saved.', 'success')">Save Changes</button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="mobile-bottom-nav">
+    <a href="#dashboard" class="mob-nav-item active"><span class="mob-nav-icon">🏛️</span><span>Home</span></a>
+    <a href="#research-explorer" class="mob-nav-item"><span class="mob-nav-icon">📚</span><span>Research</span></a>
+    <a href="#gis-lab" class="mob-nav-item"><span class="mob-nav-icon">🗺️</span><span>GIS</span></a>
+    <a href="#policy-explorer" class="mob-nav-item"><span class="mob-nav-icon">⚖️</span><span>Policy</span></a>
+    <a href="#profile" class="mob-nav-item"><span class="mob-nav-icon">👤</span><span>Account</span></a>
+  </nav>
+
+</div>
+
+<!-- MODALS & DRAWERS -->
+<div class="modal-overlay" id="globalModalOverlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 class="modal-title" id="globalModalTitle">Modal Title</h3>
+      <button class="header-btn modal-close" aria-label="Close modal">✕</button>
+    </div>
+    <div class="modal-body" id="globalModalBody"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="globalSearchModal">
+  <div class="modal-dialog" style="max-width: 680px;">
+    <div class="modal-header" style="border-bottom:none; padding-bottom:0;">
+      <input type="text" id="globalSearchInput" class="form-input" style="width:100%; font-size:1.1rem; padding:12px 16px;" placeholder="Search papers, datasets, policies, or coordinates..." />
+    </div>
+    <div class="modal-body">
+      <div id="globalSearchResults">
+        <div class="search-history-box" style="font-size:0.85rem; color:var(--text-muted);">
+          <strong>Recent Searches:</strong> Maharashtra land use, SVAMITVA drone mapping, Sundarbans climate risk, DILRMP 2.0
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="mobile-drawer" id="mobileDrawer">
+  <div class="mobile-drawer-header">
+    <span class="brand-title">MatriBhumi</span>
+    <button class="header-btn" onclick="document.getElementById('mobileDrawer').classList.remove('open'); document.getElementById('drawerOverlay').classList.remove('open');">✕</button>
+  </div>
+  <div class="mobile-drawer-nav">
+    <a href="#dashboard" class="sidebar-link">🏛️ National Dashboard</a>
+    <a href="#research-explorer" class="sidebar-link">📚 Research Hub</a>
+    <a href="#literature-ai" class="sidebar-link">🤖 Literature AI</a>
+    <a href="#datasets" class="sidebar-link">📊 Datasets Catalog</a>
+    <a href="#land-explorer" class="sidebar-link">🛰️ Land Intelligence</a>
+    <a href="#evidence-graph" class="sidebar-link">🕸️ Evidence Graph</a>
+    <a href="#gis-lab" class="sidebar-link">🗺️ GIS Lab</a>
+    <a href="#policy-explorer" class="sidebar-link">⚖️ Policy Lab</a>
+    <a href="#scenario-builder" class="sidebar-link">🧪 Scenario Builder</a>
+    <a href="#innovation-challenges" class="sidebar-link">💡 Innovation Hub</a>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- JAVASCRIPT MODULES -->
+<script src="js/storage.js"></script>
+<script src="js/language.js"></script>
+<script src="js/api.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/map.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/research.js"></script>
+<script src="js/land.js"></script>
+<script src="js/gis.js"></script>
+<script src="js/policy.js"></script>
+<script src="js/insights.js"></script>
+<script src="js/innovation.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/app.js"></script>
 
 </body>
 </html>
